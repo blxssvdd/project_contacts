@@ -36,7 +36,7 @@ async def add_user(user_model: UserModel, db: AsyncSession = Depends(get_db)):
 async def get_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     query = select(User).filter_by(username=form_data.username)
     result = await db.execute(query)
-    user: Optional[User] = result.scalar_one_or_none
+    user: Optional[User] = result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

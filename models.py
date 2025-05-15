@@ -34,8 +34,8 @@ class Contact(Base):
     number: Mapped[str] = mapped_column(String(50))
     account_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     
-    def init(self, **kwargs):
-        super().init(**kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.id = uuid4().hex
         
         
@@ -50,8 +50,8 @@ class User(Base):
     role: Mapped[RoleEnum] = mapped_column(default=RoleEnum.user.name)
     token: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, default=None)
     
-    def init(self, **kwargs):
-        super().init(**kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.id = uuid4().hex
     
 
