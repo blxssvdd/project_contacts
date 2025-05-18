@@ -37,21 +37,20 @@ class UserModelResponse(UserModel):
     role: RoleEnum
 
 
-class AuthorModel(BaseModel):
-
-    name: Annotated[str, Field(..., min_length=2, max_length=50, description="Ім'я автора")]
-    email: Annotated[EmailStr, Field(..., min_length=3, max_length=50, description="Email", examples=["authoremail@gmail.com"])]
-
 
 class ArticleModel(BaseModel):
     title: Annotated[str, Field(..., min_length=2, max_length=100, description="Заголовок статті")]
     content: Annotated[str, Field(..., min_length=2, description="Контент статті")]
-    author: AuthorModel
+    author: Annotated[str, Field(..., min_length=2, max_length=50, description="Ім'я автора статті")]
+    author_email: Annotated[EmailStr, Field(..., min_length=3, max_length=50, description="Email автора статті", examples=["authoremail@gmail.com"])]
+    created_at: Annotated[Optional[datetime], Field(default_factory=datetime.now, description="Дата створення статті")]
 
 
 class ArticleModelResponse(ArticleModel):
     id: str
-    author_id: str
+    created_at: Annotated[Optional[datetime], Field(default_factory=datetime.now, description="Дата створення статті")]
+
+
 
 
 class ArticleRequestModel(BaseModel):

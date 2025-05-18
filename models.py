@@ -57,13 +57,6 @@ class User(Base):
         self.id = uuid4().hex
 
     
-class Author(Base):
-    __tablename__ = "authors"
-
-    id: Mapped[str] = mapped_column(String(100), primary_key=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False)
-    email: Mapped[str] = mapped_column(String(50), unique=True)
-
 
 class Article(Base):
     __tablename__ = "articles"
@@ -71,8 +64,9 @@ class Article(Base):
     id: Mapped[str] = mapped_column(String(100), primary_key=True)
     title: Mapped[str] = mapped_column(String(100))
     content: Mapped[str] = mapped_column(Text())
-    author_id: Mapped[str] = mapped_column(ForeignKey("authors.id"), nullable=False)
-    author: Mapped[Author] = relationship()
+    author: Mapped[str] = mapped_column(String(50))
+    author_email: Mapped[str] = mapped_column(String(50))
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now())
 
 
 class Comment(Base):

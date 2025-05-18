@@ -8,8 +8,8 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 import uvicorn
 
-from models import Contact, get_db, User, Author, Article, Comment
-from pydantic_models import ContactModel, ContactModelResponse, UserModel, UserModelResponse, AuthorModel, ArticleModel, ArticleModelResponse, ArticleRequestModel, CommentModel, CommentModelResponse
+from models import Contact, get_db, User, Article, Comment
+from pydantic_models import ContactModel, ContactModelResponse, UserModel, UserModelResponse, ArticleModel, ArticleModelResponse, ArticleRequestModel, CommentModel, CommentModelResponse
 from users import users_router, get_user
 
 app = FastAPI()
@@ -76,30 +76,62 @@ async def delete_contact(
 
 
 
-@app.post("/articles/", tags=["Articles"], summary="Створити нову статтю", status_code=status.HTTP_201_CREATED, response_model=ArticleModelResponse)
+@app.post("/articles/", tags=["Articles"], summary="Додати нову статтю", status_code=status.HTTP_201_CREATED, response_model=ArticleModelResponse)
 async def add_article(
     article_model: ArticleModel,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_user)
 ):
-
     article = Article(**article_model.model_dump(), id=uuid4().hex)
     db.add(article)
     await db.commit()
     return article
 
 
+@app.get("/articles/", tags=["Articles"], summary="Отримати список статей", response_model=list[ArticleModelResponse])
+async def get_articles(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    result = await db.execute(select(Article))
+    articles = result.scalars().all()
+    return articles
 
 
+@app.get("/articles/{article_id}", tags=["Articles"], summary="Отримати статтю за ID", response_model=ArticleModelResponse)
+async def get_article(
+    article_id: str = Path(..., min_length=1, max_length=100, description="ID статті"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    query = select(Article).filter_by(id=article_id)
+    result = await db.execute(query)
+    article: Optional[Article] = result.scalar_one_or_none()
 
-# @app.get("/articles/", tags=["Articles"], summary="Отримати список статей", response_model=[ArticleModelResponse])
-# async def get_articles(
-#     db: AsyncSession = Depends(get_db),
-#     user: User = Depends(get_user),
-# ):
-#     result = await db.execute(select(Article))
-#     articles = result.scalars().all()
-#     return articles
+    if not article:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Стаття не знайдена")
+
+    return article
+
+
+@app.delete("/articles/{article_id}", tags=["Articles"], summary="Видалити статтю за ID", status_code=status.HTTP_200_OK)
+async def delete_article(
+    article_id: str = Path(..., min_length=1, max_length=100, description="ID статті"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    query = select(Article).filter_by(id=article_id)
+    result = await db.execute(query)
+    article: Optional[Article] = result.scalar_one_or_none()
+
+    if not article:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Стаття не знайдена")
+
+    await db.delete(article)
+    await db.commit()
+    return {"detail": "Стаття успішно видалена"}
+
+
 
 
 
