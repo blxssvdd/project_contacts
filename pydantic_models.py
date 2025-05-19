@@ -66,5 +66,4 @@ class CommentModel(BaseModel):
 
 class CommentModelResponse(CommentModel):
     id: str
-    article_id: str
     created_at: Annotated[Optional[datetime], Field(default_factory=datetime.now, description="Дата створення коментаря")]

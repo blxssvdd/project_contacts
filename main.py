@@ -1,7 +1,7 @@
 from typing import Optional, Annotated
 from uuid import uuid4
 from sqlalchemy import select
-
+from datetime import datetime, date
 
 from fastapi import FastAPI, Query, Path, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -131,6 +131,97 @@ async def delete_article(
     await db.commit()
     return {"detail": "Стаття успішно видалена"}
 
+
+
+@app.get("/articles/search/", tags=["Articles"], summary="Пошук статей по ключовому слову", response_model=list[ArticleModelResponse])
+async def search_articles(
+    keyword: str = Query(..., min_length=1, max_length=100, description="Ключове слово для пошуку"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    
+    text = f"%{keyword}%"
+    query = select(Article).filter(Article.content.like(text))
+    result = await db.execute(query)
+    articles = result.scalars().all()
+    if not articles:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Статті не знайдені")
+    return articles
+
+
+
+@app.get("/articles/filter/", tags=["Articles"], summary="Фільтрація статей по даті", response_model=list[ArticleModelResponse])
+async def filter_articles_by_date(
+    date_start: datetime = Query(..., description="Початкова дата (YYYY-MM-DD)"),
+    date_end: datetime = Query(..., description="Кінцева дата (YYYY-MM-DD)"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    
+    query = select(Article).filter(Article.created_at > date_start).filter(Article.created_at < date_end)
+    result = await db.execute(query)
+    articles = result.scalars().all()
+    if not articles:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Статті не знайдені")
+    return articles
+
+
+
+@app.post("/comments/", tags=["Comments"], summary="Додати новий коментар", status_code=status.HTTP_201_CREATED, response_model=CommentModelResponse)
+async def add_comment(
+    comment_model: CommentModel,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    comment = Comment(**comment_model.model_dump(), id=uuid4().hex)
+    db.add(comment)
+    await db.commit()
+    db.refresh(comment)
+    return comment
+
+
+@app.get("/comments/", tags=["Comments"], summary="Отримати список коментарів", response_model=list[CommentModelResponse])
+async def get_comments(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    result = await db.execute(select(Comment))
+    comments = result.scalars().all()
+    return comments
+
+
+@app.get("/comments/{comment_id}", tags=["Comments"], summary="Отримати коментар за ID", response_model=CommentModelResponse)
+async def get_comment(
+    comment_id: str = Path(..., min_length=1, max_length=100, description="ID коментаря"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    query = select(Comment).filter_by(id=comment_id)
+    result = await db.execute(query)
+    comment: Optional[Comment] = result.scalar_one_or_none()
+
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Коментар не знайдено")
+
+    return comment
+
+
+@app.delete("/comments/{comment_id}", tags=["Comments"], summary="Видалити коментар за ID", status_code=status.HTTP_200_OK)
+async def delete_comment(
+    comment_id: str = Path(..., min_length=1, max_length=100, description="ID коментаря"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_user)
+):
+    query = select(Comment).filter_by(id=comment_id)
+    result = await db.execute(query)
+    comment: Optional[Comment] = result.scalar_one_or_none()
+
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Коментар не знайдено")
+
+    await db.delete(comment)
+    await db.commit()
+    return {"detail": "Коментар успішно видалено"}
 
 
 
