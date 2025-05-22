@@ -2,8 +2,12 @@ from typing import Optional, Annotated
 from uuid import uuid4
 from sqlalchemy import select
 from datetime import datetime, date
+import logging
+import asyncio
 
-from fastapi import FastAPI, Query, Path, HTTPException, status, Depends
+# datetime.now()
+
+from fastapi import FastAPI, Query, Path, HTTPException, status, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 import uvicorn
@@ -14,6 +18,26 @@ from users import users_router, get_user
 
 app = FastAPI()
 app.include_router(users_router)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("test_middleware")
+
+
+@app.middleware("http")
+async def test_middleware(request: Request, call_next) -> Response:
+    x_custom_header = request.headers.get("X-Custom-Header")
+    if not x_custom_header:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Заголовок 'X-Custom-Header' є обов'язковим")
+
+
+    response: Response = await call_next(request)
+
+
+    time_end = str(datetime.now())
+    logger.info(f"Визвали функцію {call_next} за допомогою методу {request.method} {request.url} за {datetime.now()} с.")
+    response.headers["Execute-time"] = str(time_end)
+
+    return response
+
 
 
 @app.post("/contacts/", tags=["Contacts"], summary="Додати новий контакт", status_code=status.HTTP_201_CREATED, response_model=ContactModelResponse)
